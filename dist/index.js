@@ -103,7 +103,6 @@ var Converter = /** @class */ (function () {
             throw new Error("There is no YM2413 data sequences.");
         }
         while (!this._data.eod) {
-            this._detectNewLoopOffset();
             var d = this._data.readByte();
             if (d == 0x67) {
                 this._output.writeByte(d);
@@ -163,6 +162,7 @@ var Converter = /** @class */ (function () {
             else {
                 throw new Error("Unsupported command: 0x" + d.toString(16));
             }
+            this._detectNewLoopOffset();
         }
         return this._buildVGM();
     };

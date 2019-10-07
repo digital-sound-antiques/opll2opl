@@ -123,7 +123,6 @@ export default class Converter {
     }
 
     while (!this._data.eod) {
-      this._detectNewLoopOffset();
       const d = this._data.readByte();
       if (d == 0x67) {
         this._output.writeByte(d);
@@ -168,6 +167,7 @@ export default class Converter {
       } else {
         throw new Error("Unsupported command: 0x" + d.toString(16));
       }
+      this._detectNewLoopOffset();
     }
 
     return this._buildVGM();

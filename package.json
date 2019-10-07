@@ -1,6 +1,6 @@
 {
   "name": "2413-to-3812",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "VGM converter from OPLL to OPL",
   "bin": "dist/cmd.js",
   "main": "dist/index.js",
