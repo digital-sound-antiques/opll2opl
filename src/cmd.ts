@@ -11,7 +11,7 @@ const yargs = YARGS.usage("Usage: $0 [options] vgmfile")
   .option("type", {
     alias: "t",
     describe: "Specify output chip",
-    choices: ["ym3812", "ym3526", "y8950"],
+    choices: ["ym3812", "ym3526", "y8950", "ymf262"],
     default: "ym3812",
   })
   .option("output", {

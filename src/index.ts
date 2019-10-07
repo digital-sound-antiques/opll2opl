@@ -10,7 +10,7 @@ export default class Converter {
   private _orgLoopOffset: number; // original loop offset from top of the data.
   private _newLoopOffset: number; // new loop offset from top of the data.
   private _converter: OPLLToOPL;
-  private _destChip: "ym3812" | "ym3526" | "y8950";
+  private _destChip: "ym3812" | "ym3526" | "y8950" | "ymf262";
 
   constructor(vgm: VGM, dest: string) {
     this._vgm = vgm;
@@ -24,6 +24,7 @@ export default class Converter {
         case "ym3812":
         case "ym3526":
         case "y8950":
+        case "ymf262":
           return chip;
         default:
           return "ym3812";
@@ -108,8 +109,9 @@ export default class Converter {
     vgm.header.offsets.data = 0x100;
     vgm.header.offsets.loop = vgm.header.offsets.data + this._newLoopOffset;
     vgm.header.offsets.eof = vgm.header.offsets.data + dataLength;
+    const mult = this._destChip === "ymf262" ? 4.0 : 1.0;
     vgm.header.chips[this._destChip] = {
-      clock: vgm.header.chips.ym2413!.clock,
+      clock: vgm.header.chips.ym2413!.clock * mult,
     };
     vgm.header.chips.ym2413 = undefined;
     return vgm.build();

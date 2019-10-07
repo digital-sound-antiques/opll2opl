@@ -20,6 +20,8 @@ function type2cmd(type) {
             return 0x5b;
         case "y8950":
             return 0x5c;
+        case "ymf262":
+            return 0x5e;
         case "ym3812":
         default:
             return 0x5a;

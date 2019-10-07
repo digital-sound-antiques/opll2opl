@@ -14,6 +14,8 @@ function type2cmd(type: string) {
       return 0x5b;
     case "y8950":
       return 0x5c;
+    case "ymf262":
+      return 0x5e;
     case "ym3812":
     default:
       return 0x5a;
@@ -25,7 +27,7 @@ export default class OPLLToOPL {
   _type: string;
   _command: number;
 
-  constructor(type: "ym3526" | "y8950" | "ym3812") {
+  constructor(type: "ym3526" | "y8950" | "ym3812" | "ymf262") {
     this._type = type;
     this._command = type2cmd(type);
   }

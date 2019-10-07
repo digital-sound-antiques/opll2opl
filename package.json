@@ -1,7 +1,7 @@
 {
   "name": "2413-to-3812",
-  "version": "1.0.0",
-  "description": "VGM converter from YM2413 to YM3812, YM3526 and Y8950",
+  "version": "1.1.0",
+  "description": "VGM converter from OPLL to OPL",
   "bin": "dist/cmd.js",
   "main": "dist/index.js",
   "scripts": {
@@ -13,7 +13,8 @@
     "YM2413",
     "YM3812",
     "YM3526",
-    "Y8950"
+    "Y8950",
+    "YMF262"
   ],
   "author": "Mitsutaka Okazaki",
   "license": "ISC",

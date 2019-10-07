@@ -4,7 +4,7 @@ export default class OPLLToOPL {
     _oplRegs: Uint8Array;
     _type: string;
     _command: number;
-    constructor(type: "ym3526" | "y8950" | "ym3812");
+    constructor(type: "ym3526" | "y8950" | "ym3812" | "ymf262");
     readonly command: number;
     _buildVoiceSetup(ch: number, v: OPLLVoice, modVolume: number | null, carVolume: number | null, al: number): {
         a: number;

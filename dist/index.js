@@ -19,6 +19,7 @@ var Converter = /** @class */ (function () {
                 case "ym3812":
                 case "ym3526":
                 case "y8950":
+                case "ymf262":
                     return chip;
                 default:
                     return "ym3812";
@@ -90,8 +91,9 @@ var Converter = /** @class */ (function () {
         vgm.header.offsets.data = 0x100;
         vgm.header.offsets.loop = vgm.header.offsets.data + this._newLoopOffset;
         vgm.header.offsets.eof = vgm.header.offsets.data + dataLength;
+        var mult = this._destChip === "ymf262" ? 4.0 : 1.0;
         vgm.header.chips[this._destChip] = {
-            clock: vgm.header.chips.ym2413.clock,
+            clock: vgm.header.chips.ym2413.clock * mult,
         };
         vgm.header.chips.ym2413 = undefined;
         return vgm.build();
