@@ -12,6 +12,7 @@ function getModOffset(ch) {
     return 8 * Math.floor(ch / 3) + (ch % 3);
 }
 function _R(rate) {
+    // if (8 < rate && rate < 15) return rate + 1;
     return rate;
 }
 function type2cmd(type) {
@@ -27,23 +28,40 @@ function type2cmd(type) {
             return 0x5a;
     }
 }
-var OPLLToOPL = /** @class */ (function () {
-    function OPLLToOPL(type) {
+var OPLL2OPL = /** @class */ (function () {
+    // clock rate-conversion is still not supported.
+    function OPLL2OPL(type, opllClock, oplClock) {
         this._regs = new Uint8Array(256).fill(0);
         this._oplRegs = new Uint8Array(256).fill(0);
         this._rflag = false;
         this._initialized = false;
         this._type = type;
-        this._command = type2cmd(type);
+        this._opllClock = opllClock;
+        this._oplClock = oplClock;
+        this._command = type2cmd(this._type);
     }
-    Object.defineProperty(OPLLToOPL.prototype, "command", {
+    Object.defineProperty(OPLL2OPL.prototype, "type", {
+        get: function () {
+            return this._type;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(OPLL2OPL.prototype, "clock", {
+        get: function () {
+            return this._type === "ymf262" ? this._oplClock * 4 : this._oplClock;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(OPLL2OPL.prototype, "command", {
         get: function () {
             return this._command;
         },
         enumerable: true,
         configurable: true
     });
-    OPLLToOPL.prototype._buildVoiceSetup = function (ch, v, modVolume, carVolume, al) {
+    OPLL2OPL.prototype._buildVoiceSetup = function (ch, v, modVolume, carVolume, al) {
         var modOffset = getModOffset(ch);
         var carOffset = modOffset + 3;
         return [
@@ -89,13 +107,13 @@ var OPLLToOPL = /** @class */ (function () {
             },
             {
                 a: 0xc0 + ch,
-                d: (v.mod.fb << 1) | al,
+                d: (this._type === "ymf262" ? 0xf0 : 0) | (v.mod.fb << 1) | al,
             },
             { a: 0xe0 + modOffset, d: v.mod.wf ? 1 : 0 },
             { a: 0xe0 + carOffset, d: v.car.wf ? 1 : 0 },
         ];
     };
-    OPLLToOPL.prototype._buildInstAndVolume = function (ch) {
+    OPLL2OPL.prototype._buildInstAndVolume = function (ch) {
         var d = this._regs[0x30 + ch];
         var inst = (d & 0xf0) >> 4;
         var volume = d & 0xf;
@@ -137,7 +155,7 @@ var OPLLToOPL = /** @class */ (function () {
         }
         return ret;
     };
-    OPLLToOPL.prototype._interpretOpll = function (a, d) {
+    OPLL2OPL.prototype._interpret = function (a, d) {
         this._regs[a & 0xff] = d & 0xff;
         if (a == 0x0e) {
             var ret = [];
@@ -187,7 +205,7 @@ var OPLLToOPL = /** @class */ (function () {
         }
         return [];
     };
-    OPLLToOPL.prototype.interpretOpll = function (a, d) {
+    OPLL2OPL.prototype.interpret = function (a, d) {
         var _this = this;
         var res = [];
         if (!this._initialized) {
@@ -197,7 +215,7 @@ var OPLLToOPL = /** @class */ (function () {
             });
             this._initialized = true;
         }
-        res = res.concat(this._interpretOpll(a, d));
+        res = res.concat(this._interpret(a, d));
         res = res.filter(function (_a) {
             var a = _a.a, d = _a.d;
             return _this._oplRegs[a] !== d;
@@ -208,6 +226,6 @@ var OPLLToOPL = /** @class */ (function () {
         });
         return res;
     };
-    return OPLLToOPL;
+    return OPLL2OPL;
 }());
-exports.default = OPLLToOPL;
+exports.default = OPLL2OPL;

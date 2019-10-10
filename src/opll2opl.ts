@@ -1,14 +1,16 @@
 import OPLL_VOICES, { OPLLVoice, rawVoiceToVoice } from "./opll-voices";
+import OPLType from "./opl-type";
 
 function getModOffset(ch: number) {
   return 8 * Math.floor(ch / 3) + (ch % 3);
 }
 
 function _R(rate: number) {
+  // if (8 < rate && rate < 15) return rate + 1;
   return rate;
 }
 
-function type2cmd(type: string) {
+function type2cmd(type: OPLType) {
   switch (type) {
     case "ym3526":
       return 0x5b;
@@ -21,15 +23,29 @@ function type2cmd(type: string) {
       return 0x5a;
   }
 }
-export default class OPLLToOPL {
+
+export default class OPLL2OPL {
   _regs = new Uint8Array(256).fill(0);
   _oplRegs = new Uint8Array(256).fill(0);
-  _type: string;
+  _type: OPLType;
+  _opllClock: number;
+  _oplClock: number;
   _command: number;
 
-  constructor(type: "ym3526" | "y8950" | "ym3812" | "ymf262") {
+  // clock rate-conversion is still not supported.
+  constructor(type: OPLType, opllClock: number, oplClock: number) {
     this._type = type;
-    this._command = type2cmd(type);
+    this._opllClock = opllClock;
+    this._oplClock = oplClock;
+    this._command = type2cmd(this._type);
+  }
+
+  get type() {
+    return this._type;
+  }
+
+  get clock() {
+    return this._type === "ymf262" ? this._oplClock * 4 : this._oplClock;
   }
 
   get command() {
@@ -90,7 +106,7 @@ export default class OPLLToOPL {
       },
       {
         a: 0xc0 + ch,
-        d: (v.mod.fb << 1) | al,
+        d: (this._type === "ymf262" ? 0xf0 : 0) | (v.mod.fb << 1) | al,
       },
       { a: 0xe0 + modOffset, d: v.mod.wf ? 1 : 0 },
       { a: 0xe0 + carOffset, d: v.car.wf ? 1 : 0 },
@@ -158,7 +174,7 @@ export default class OPLLToOPL {
     return ret;
   }
 
-  _interpretOpll(a: number, d: number): { a: number; d: number }[] {
+  _interpret(a: number, d: number): { a: number; d: number }[] {
     this._regs[a & 0xff] = d & 0xff;
 
     if (a == 0x0e) {
@@ -214,7 +230,7 @@ export default class OPLLToOPL {
 
   _initialized: boolean = false;
 
-  interpretOpll(a: number, d: number) {
+  interpret(a: number, d: number) {
     let res: { a: number; d: number }[] = [];
     if (!this._initialized) {
       res.push({
@@ -223,10 +239,8 @@ export default class OPLLToOPL {
       });
       this._initialized = true;
     }
-    res = res.concat(this._interpretOpll(a, d));
-    res = res.filter(({ a, d }) => {
-      return this._oplRegs[a] !== d;
-    });
+    res = res.concat(this._interpret(a, d));
+    res = res.filter(({ a, d }) => this._oplRegs[a] !== d);
     res.forEach(({ a, d }) => {
       this._oplRegs[a] = d;
     });

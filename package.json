@@ -1,7 +1,7 @@
 {
-  "name": "2413-to-3812",
-  "version": "1.1.1",
-  "description": "VGM converter from OPLL to OPL",
+  "name": "opll2opl",
+  "version": "1.2.0",
+  "description": "VGM converter from OPLL to OPLx",
   "bin": "dist/cmd.js",
   "main": "dist/index.js",
   "scripts": {
@@ -14,10 +14,15 @@
     "YM3812",
     "YM3526",
     "Y8950",
-    "YMF262"
+    "YMF262",
+    "AY-3-8910"
   ],
   "author": "Mitsutaka Okazaki",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digital-sound-antiques/opll2opl.git"
+  },
   "dependencies": {
     "yargs": "^14.2.0"
   },

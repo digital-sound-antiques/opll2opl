@@ -1,7 +1,27 @@
 import VGM from "./vgm";
 
 import { InputBuffer, OutputBuffer } from "./buffer";
-import OPLLToOPL from "./opll2opl";
+import PSG2OPL from "./psg2opl";
+import OPLL2OPL from "./opll2opl";
+import OPLType from "./opl-type";
+
+function toOPLType(type: string): OPLType | null {
+  switch (type) {
+    case "opl2":
+    case "ym3812":
+      return "ym3812";
+    case "opl":
+    case "ym3526":
+      return "ym3526";
+    case "y8950":
+      return "y8950";
+    case "opl3":
+    case "ymf262":
+      return "ymf262";
+    default:
+      return null;
+  }
+}
 
 export default class Converter {
   private _vgm: VGM;
@@ -9,30 +29,42 @@ export default class Converter {
   private _output: OutputBuffer;
   private _orgLoopOffset: number; // original loop offset from top of the data.
   private _newLoopOffset: number; // new loop offset from top of the data.
-  private _converter: OPLLToOPL;
-  private _destChip: "ym3812" | "ym3526" | "y8950" | "ymf262";
+  private _psg2opl?: PSG2OPL;
+  private _opll2opl?: OPLL2OPL;
+  private _opllTo: OPLType | null;
+  private _psgTo: OPLType | null;
+  private _oplClock: number;
 
-  constructor(vgm: VGM, dest: string) {
+  constructor(vgm: VGM, opllTo: string, psgTo: string) {
     this._vgm = vgm;
     this._orgLoopOffset =
       this._vgm.header.offsets.loop - this._vgm.header.offsets.data;
     this._newLoopOffset = 0;
     this._data = new InputBuffer(vgm.data.buffer);
     this._output = new OutputBuffer(new ArrayBuffer(8));
-    const chip = ((chip: string) => {
-      switch (chip) {
-        case "ym3812":
-        case "ym3526":
-        case "y8950":
-        case "ymf262":
-          return chip;
-        default:
-          return "ym3812";
-      }
-    })(dest);
 
-    this._converter = new OPLLToOPL(chip);
-    this._destChip = chip;
+    this._opllTo = toOPLType(opllTo);
+    this._psgTo = toOPLType(psgTo);
+
+    this._oplClock = vgm.header.chips.ym2413
+      ? vgm.header.chips.ym2413.clock
+      : 3579545;
+
+    if (this._psgTo) {
+      this._psg2opl = new PSG2OPL(
+        this._psgTo,
+        vgm.header.chips.ay8910 ? vgm.header.chips.ay8910.clock : 3579545 / 2,
+        this._oplClock
+      );
+    }
+
+    if (this._opllTo) {
+      this._opll2opl = new OPLL2OPL(
+        this._opllTo,
+        vgm.header.chips.ym2413 ? vgm.header.chips.ym2413.clock : 3579545,
+        this._oplClock
+      );
+    }
   }
 
   private _processGameGearPsg() {
@@ -46,14 +78,48 @@ export default class Converter {
   }
 
   private _processYm2413() {
+    if (!this._opll2opl) return;
+
+    this._initializeOPL3();
+
     const a = this._data.readByte();
     const d = this._data.readByte();
 
-    const data = this._converter.interpretOpll(a, d);
+    const data = this._opll2opl.interpret(a, d);
 
     for (let i = 0; i < data.length; i++) {
       const { a, d } = data[i];
-      this._output.writeByte(this._converter.command);
+      this._output.writeByte(this._opll2opl.command);
+      this._output.writeByte(a);
+      this._output.writeByte(d);
+    }
+  }
+
+  _opl3initialized = false;
+
+  private _initializeOPL3() {
+    if (this._opllTo === "ymf262" || this._psgTo === "ymf262") {
+      if (!this._opl3initialized) {
+        this._output.writeByte(0x5f);
+        this._output.writeByte(0x05);
+        this._output.writeByte(0x01);
+        this._opl3initialized = true;
+      }
+    }
+  }
+
+  private _processAY8910() {
+    if (!this._psg2opl) return;
+    this._initializeOPL3();
+
+    const a = this._data.readByte();
+    const d = this._data.readByte();
+
+    const data = this._psg2opl.interpret(a, d);
+
+    for (let i = 0; i < data.length; i++) {
+      const { a, d } = data[i];
+      this._output.writeByte(this._psg2opl.command);
       this._output.writeByte(a);
       this._output.writeByte(d);
     }
@@ -94,7 +160,7 @@ export default class Converter {
   }
 
   private _detectNewLoopOffset() {
-    if (this._orgLoopOffset !== 0 && this._newLoopOffset === 0) {
+    if (0 <= this._orgLoopOffset && this._newLoopOffset === 0) {
       if (this._orgLoopOffset <= this._data.readOffset) {
         this._newLoopOffset = this._output.writeOffset;
       }
@@ -107,21 +173,31 @@ export default class Converter {
 
     vgm.header.version = 0x171;
     vgm.header.offsets.data = 0x100;
-    vgm.header.offsets.loop = vgm.header.offsets.data + this._newLoopOffset;
+    if (this._newLoopOffset) {
+      vgm.header.offsets.loop = vgm.header.offsets.data + this._newLoopOffset;
+    } else {
+      vgm.header.offsets.loop = 0;
+    }
     vgm.header.offsets.eof = vgm.header.offsets.data + dataLength;
-    const mult = this._destChip === "ymf262" ? 4.0 : 1.0;
-    vgm.header.chips[this._destChip] = {
-      clock: vgm.header.chips.ym2413!.clock * mult,
-    };
-    vgm.header.chips.ym2413 = undefined;
+
+    if (this._opll2opl) {
+      vgm.header.chips[this._opll2opl.type] = {
+        clock: this._opll2opl.clock,
+      };
+      vgm.header.chips.ym2413 = undefined;
+    }
+
+    if (this._psg2opl) {
+      vgm.header.chips[this._psg2opl.type] = {
+        clock: this._psg2opl.clock,
+      };
+      vgm.header.chips.ay8910 = undefined;
+    }
+
     return vgm.build();
   }
 
   convert() {
-    if (!this._vgm.header.chips.ym2413) {
-      throw new Error("There is no YM2413 data sequences.");
-    }
-
     while (!this._data.eod) {
       const d = this._data.readByte();
       if (d == 0x67) {
@@ -141,13 +217,22 @@ export default class Converter {
         this._output.writeByte(d);
         this._processSn76489();
       } else if (d == 0x51) {
-        this._processYm2413();
+        if (this._opll2opl) {
+          this._processYm2413();
+        } else {
+          this._output.writeByte(d);
+          this._processCommon();
+        }
       } else if (0x52 <= d && d <= 0x5f) {
         this._output.writeByte(d);
         this._processCommon();
       } else if (d == 0xa0) {
-        this._output.writeByte(d);
-        this._processCommon();
+        if (this._psg2opl) {
+          this._processAY8910();
+        } else {
+          this._output.writeByte(d);
+          this._processCommon();
+        }
       } else if (0xb0 <= d && d <= 0xbf) {
         this._output.writeByte(d);
         this._processCommon();

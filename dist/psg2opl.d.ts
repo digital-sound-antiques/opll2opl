@@ -1,22 +1,24 @@
-import { OPLLVoice } from "./opll-voices";
 import OPLType from "./opl-type";
-export default class OPLL2OPL {
+export default class PSGToOPL {
     _regs: Uint8Array;
     _oplRegs: Uint8Array;
     _type: OPLType;
-    _opllClock: number;
+    _psgClock: number;
     _oplClock: number;
     _command: number;
-    constructor(type: OPLType, opllClock: number, oplClock: number);
+    constructor(type: OPLType, psgClock: number, oplClock: number);
     readonly type: OPLType;
     readonly clock: number;
     readonly command: number;
-    _buildVoiceSetup(ch: number, v: OPLLVoice, modVolume: number | null, carVolume: number | null, al: number): {
+    _updateFreq(ch: number, freq: number): {
         a: number;
         d: number;
     }[];
-    _rflag: boolean;
-    _buildInstAndVolume(ch: number): {
+    _updateVol(ch: number, vol: number): {
+        a: number;
+        d: number;
+    }[];
+    _updateTone(ch: number): {
         a: number;
         d: number;
     }[];

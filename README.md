@@ -1,31 +1,48 @@
-# 2413-to-3812
+# opll2opl
 
-OPLL to OPL/OPL2 data converter for VGM files.
+OPLL to OPLx data converter for VGM files.
 
 # Install
 
 ```
-$ npm install -g 2413-to-3812
+$ npm install -g opll2opl
 ```
 
 # Usage
 
-The following command converts the YM2413 commands in `sample.vgm` to YM3812, then write `sample.ym3812.vgm`.
+The following command converts OPLL (YM2413) track in `sample.vgm` to YM3812, then write `sample.out.vgm`.
 
 ```
-$ 2413-to-3812 sample.vgm
+$ opll2opl -t ym3812 sample.vgm
+```
+
+The following command converts PSG (AY-3-8910) track in `sample.vgm` to y8950, then write `sample.out.vgm`.
+Do not expect PSG conversion quality. Hardware envelope is not supported and noise generator is highly limited.
+
+```
+$ opll2opl -p y8950 sample.vgm
+```
+
+Convert both OPLL and PSG tracks in `sample.vgm` to YMF262 (OPL3), then write `sample.out.vgm`.
+
+```
+$ opll2opl -t ymf262 -p ymf262 sample.vgm
 ```
 
 # Options
 
 ```
-Usage: 2413-to-3812 [options] vgmfile
+Usage: opll2opl [options] vgmfile
 
 Options:
   --version     Show version number                                    [boolean]
-  --type, -t    Specify output chip
-                      [choices: "ym3812", "ym3526", "y8950"] [default: "ym3812"]
-  --output, -o  Specify output file name (without file extension)
+  --to, -t      Convert ym2413 track to specified device.
+    [choices: "ym3812", "ym3526", "y8950", "ymf262", "none"] [default: "ym3812"]
+  --output, -o  Specify output file name
   --zip, -z     Zip-compress output                                    [boolean]
+  --psg-to, -p  Convert ay-3-8910 track to specified device. ym2413 and
+                ay-3-8910 tracks are converted simultaneously only if ymf262 is
+                selected.
+      [choices: "ym3812", "ym3526", "y8950", "ymf262", "none"] [default: "none"]
   --help        Show help                                              [boolean]
 ```

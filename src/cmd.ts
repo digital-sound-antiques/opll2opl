@@ -8,20 +8,27 @@ import VGM from "./vgm";
 import Converter from "./index";
 
 const yargs = YARGS.usage("Usage: $0 [options] vgmfile")
-  .option("type", {
+  .option("to", {
     alias: "t",
-    describe: "Specify output chip",
-    choices: ["ym3812", "ym3526", "y8950", "ymf262"],
+    describe: "Convert ym2413 track to specified device.",
+    choices: ["ym3812", "ym3526", "y8950", "ymf262", "none"],
     default: "ym3812",
   })
   .option("output", {
     alias: "o",
-    describe: "Specify output file name (without file extension)",
+    describe: "Specify output file name",
   })
   .option("zip", {
     alias: "z",
     describe: "Zip-compress output",
     boolean: true,
+  })
+  .option("psg-to", {
+    alias: "p",
+    describe:
+      "Convert ay-3-8910 track to specified device. ym2413 and ay-3-8910 tracks are converted simultaneously only if ymf262 is selected.",
+    choices: ["ym3812", "ym3526", "y8950", "ymf262", "none"],
+    default: "none",
   })
   .demandCommand(1)
   .help();
@@ -40,12 +47,16 @@ function loadVgm(input: string): VGM {
 }
 
 function saveVgm(name: string, data: ArrayBuffer, zip: boolean) {
+  const m = name.match(/^(.*)(\.vg(m|z))$/i);
+  const nameExt = m ? `${m[1]}.${zip ? "vgz" : "vgm"}` : name;
+
   const buf = zip ? zlib.gzipSync(data) : data;
-  fs.writeFileSync(`${name}.${zip ? "vgz" : "vgm"}`, new Uint8Array(buf));
+  fs.writeFileSync(`${nameExt}`, new Uint8Array(buf));
 }
 
 const input = argv._[0];
-const type = argv.type.toLowerCase();
+const opllTo = argv.to.toLowerCase();
+const psgTo = argv["psg-to"].toLowerCase();
 
 if (input == null) {
   yargs.showHelp();
@@ -53,7 +64,8 @@ if (input == null) {
 }
 
 const vgm = loadVgm(input);
-const res = new Converter(vgm, type).convert();
+const res = new Converter(vgm, opllTo, psgTo).convert();
 
-const name = argv.output ? `${argv.output}` : `${path.basename(input)}.${type}`;
+const name = argv.output ? `${argv.output}` : `${path.basename(input)}.out.vgm`;
+
 saveVgm(name, res, argv.zip || false);

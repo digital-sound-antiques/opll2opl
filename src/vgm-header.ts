@@ -421,7 +421,11 @@ export function build(header: VGMHeader): ArrayBuffer {
   view.setUint32(0x10, chips.ym2413 ? chips.ym2413.clock : 0, true);
   view.setUint32(0x14, header.offsets.gd3, true);
   view.setUint32(0x18, header.samples.total, true);
-  view.setUint32(0x1c, header.offsets.loop - 0x1c, true);
+  view.setUint32(
+    0x1c,
+    0x1c <= header.offsets.loop ? header.offsets.loop - 0x1c : 0,
+    true
+  );
   view.setUint32(0x20, header.samples.loop, true);
 
   if (0x101 <= header.version) {
