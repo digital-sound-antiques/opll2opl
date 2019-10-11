@@ -14,7 +14,12 @@ export default class PSGToOPL {
         a: number;
         d: number;
     }[];
-    _updateVol(ch: number, vol: number): {
+    _updateNoiseFreq(np: number): {
+        a: number;
+        d: number;
+    }[];
+    _initialized: boolean;
+    _setupVoice(): {
         a: number;
         d: number;
     }[];
@@ -26,7 +31,6 @@ export default class PSGToOPL {
         a: number;
         d: number;
     }[];
-    _initialized: boolean;
     interpret(a: number, d: number): {
         a: number;
         d: number;

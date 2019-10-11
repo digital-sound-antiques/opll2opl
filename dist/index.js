@@ -33,16 +33,18 @@ var Converter = /** @class */ (function () {
         this._newLoopOffset = 0;
         this._data = new buffer_1.InputBuffer(vgm.data.buffer);
         this._output = new buffer_1.OutputBuffer(new ArrayBuffer(8));
-        this._opllTo = toOPLType(opllTo);
-        this._psgTo = toOPLType(psgTo);
+        this._opllTo = opllTo;
+        this._psgTo = psgTo;
         this._oplClock = vgm.header.chips.ym2413
             ? vgm.header.chips.ym2413.clock
             : 3579545;
-        if (this._psgTo) {
-            this._psg2opl = new psg2opl_1.default(this._psgTo, vgm.header.chips.ay8910 ? vgm.header.chips.ay8910.clock : 3579545 / 2, this._oplClock);
+        var psgToType = toOPLType(this._psgTo);
+        if (psgToType) {
+            this._psg2opl = new psg2opl_1.default(psgToType, vgm.header.chips.ay8910 ? vgm.header.chips.ay8910.clock : 3579545 / 2, this._oplClock);
         }
-        if (this._opllTo) {
-            this._opll2opl = new opll2opl_1.default(this._opllTo, vgm.header.chips.ym2413 ? vgm.header.chips.ym2413.clock : 3579545, this._oplClock);
+        var opllToType = toOPLType(this._opllTo);
+        if (opllToType) {
+            this._opll2opl = new opll2opl_1.default(opllToType, vgm.header.chips.ym2413 ? vgm.header.chips.ym2413.clock : 3579545, this._oplClock);
         }
     }
     Converter.prototype._processGameGearPsg = function () {
@@ -68,9 +70,9 @@ var Converter = /** @class */ (function () {
         }
     };
     Converter.prototype._initializeOPL3 = function () {
-        if (this._opllTo === "ymf262" || this._psgTo === "ymf262") {
+        if (this._opllTo === "ymf262") {
             if (!this._opl3initialized) {
-                this._output.writeByte(0x5f);
+                this._output.writeByte(0x5e);
                 this._output.writeByte(0x05);
                 this._output.writeByte(0x01);
                 this._opl3initialized = true;
@@ -140,13 +142,19 @@ var Converter = /** @class */ (function () {
             vgm.header.offsets.loop = 0;
         }
         vgm.header.offsets.eof = vgm.header.offsets.data + dataLength;
-        if (this._opll2opl) {
+        if (this._opllTo === "none") {
+            vgm.header.chips.ym2413 = undefined;
+        }
+        else if (this._opll2opl) {
             vgm.header.chips[this._opll2opl.type] = {
                 clock: this._opll2opl.clock,
             };
             vgm.header.chips.ym2413 = undefined;
         }
-        if (this._psg2opl) {
+        if (this._psgTo === "none") {
+            vgm.header.chips.ay8910 = undefined;
+        }
+        else if (this._psg2opl) {
             vgm.header.chips[this._psg2opl.type] = {
                 clock: this._psg2opl.clock,
             };

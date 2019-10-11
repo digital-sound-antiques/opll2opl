@@ -31,8 +31,8 @@ export default class Converter {
   private _newLoopOffset: number; // new loop offset from top of the data.
   private _psg2opl?: PSG2OPL;
   private _opll2opl?: OPLL2OPL;
-  private _opllTo: OPLType | null;
-  private _psgTo: OPLType | null;
+  private _opllTo: string;
+  private _psgTo: string;
   private _oplClock: number;
 
   constructor(vgm: VGM, opllTo: string, psgTo: string) {
@@ -43,24 +43,26 @@ export default class Converter {
     this._data = new InputBuffer(vgm.data.buffer);
     this._output = new OutputBuffer(new ArrayBuffer(8));
 
-    this._opllTo = toOPLType(opllTo);
-    this._psgTo = toOPLType(psgTo);
+    this._opllTo = opllTo;
+    this._psgTo = psgTo;
 
     this._oplClock = vgm.header.chips.ym2413
       ? vgm.header.chips.ym2413.clock
       : 3579545;
 
-    if (this._psgTo) {
+    const psgToType = toOPLType(this._psgTo);
+    if (psgToType) {
       this._psg2opl = new PSG2OPL(
-        this._psgTo,
+        psgToType,
         vgm.header.chips.ay8910 ? vgm.header.chips.ay8910.clock : 3579545 / 2,
         this._oplClock
       );
     }
 
-    if (this._opllTo) {
+    const opllToType = toOPLType(this._opllTo);
+    if (opllToType) {
       this._opll2opl = new OPLL2OPL(
-        this._opllTo,
+        opllToType,
         vgm.header.chips.ym2413 ? vgm.header.chips.ym2413.clock : 3579545,
         this._oplClock
       );
@@ -98,9 +100,9 @@ export default class Converter {
   _opl3initialized = false;
 
   private _initializeOPL3() {
-    if (this._opllTo === "ymf262" || this._psgTo === "ymf262") {
+    if (this._opllTo === "ymf262") {
       if (!this._opl3initialized) {
-        this._output.writeByte(0x5f);
+        this._output.writeByte(0x5e);
         this._output.writeByte(0x05);
         this._output.writeByte(0x01);
         this._opl3initialized = true;
@@ -180,14 +182,18 @@ export default class Converter {
     }
     vgm.header.offsets.eof = vgm.header.offsets.data + dataLength;
 
-    if (this._opll2opl) {
+    if (this._opllTo === "none") {
+      vgm.header.chips.ym2413 = undefined;
+    } else if (this._opll2opl) {
       vgm.header.chips[this._opll2opl.type] = {
         clock: this._opll2opl.clock,
       };
       vgm.header.chips.ym2413 = undefined;
     }
 
-    if (this._psg2opl) {
+    if (this._psgTo === "none") {
+      vgm.header.chips.ay8910 = undefined;
+    } else if (this._psg2opl) {
       vgm.header.chips[this._psg2opl.type] = {
         clock: this._psg2opl.clock,
       };

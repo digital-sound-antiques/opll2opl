@@ -11,8 +11,15 @@ const yargs = YARGS.usage("Usage: $0 [options] vgmfile")
   .option("to", {
     alias: "t",
     describe: "Convert ym2413 track to specified device.",
-    choices: ["ym3812", "ym3526", "y8950", "ymf262", "none"],
-    default: "ym3812",
+    choices: ["ym3812", "ym3526", "y8950", "ymf262", "thru", "none"],
+    default: "thru",
+  })
+  .option("psg-to", {
+    alias: "p",
+    describe:
+      "Convert ay-3-8910 track to specified device. ym2413 and ay-3-8910 tracks are converted simultaneously only if ymf262 is selected.",
+    choices: ["ym3812", "ym3526", "y8950", "ymf262", "thru", "none"],
+    default: "thru",
   })
   .option("output", {
     alias: "o",
@@ -22,13 +29,6 @@ const yargs = YARGS.usage("Usage: $0 [options] vgmfile")
     alias: "z",
     describe: "Zip-compress output",
     boolean: true,
-  })
-  .option("psg-to", {
-    alias: "p",
-    describe:
-      "Convert ay-3-8910 track to specified device. ym2413 and ay-3-8910 tracks are converted simultaneously only if ymf262 is selected.",
-    choices: ["ym3812", "ym3526", "y8950", "ymf262", "none"],
-    default: "none",
   })
   .demandCommand(1)
   .help();
@@ -58,14 +58,23 @@ const input = argv._[0];
 const opllTo = argv.to.toLowerCase();
 const psgTo = argv["psg-to"].toLowerCase();
 
-if (input == null) {
-  yargs.showHelp();
+if (opllTo === "none" && psgTo === "none") {
+  console.error("Please specify at least one conversion type option.");
   process.exit(1);
+}
+
+if (opllTo !== "none" && opllTo !== "ymf262") {
+  if (psgTo === opllTo) {
+    console.error(
+      "Can't use ${opllTo} for converting both OPLL and PSG simultaneously."
+    );
+    process.exit(1);
+  }
 }
 
 const vgm = loadVgm(input);
 const res = new Converter(vgm, opllTo, psgTo).convert();
 
-const name = argv.output ? `${argv.output}` : `${path.basename(input)}.out.vgm`;
+const name = argv.output ? `${argv.output}` : `output.vgm`;
 
 saveVgm(name, res, argv.zip || false);

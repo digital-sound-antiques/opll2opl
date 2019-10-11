@@ -57,23 +57,87 @@ var PSGToOPL = /** @class */ (function () {
         if (blk > 7)
             blk = 7;
         return [
-            { a: 0xa0 + ch, d: fnum & 0xff },
             { a: 0xb0 + ch, d: 0x20 | ((blk & 7) << 2) | ((fnum >> 8) & 3) },
+            { a: 0xa0 + ch, d: fnum & 0xff },
         ];
     };
-    PSGToOPL.prototype._updateVol = function (ch, vol) {
-        var tl = [63, 62, 56, 52, 46, 42, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0][vol & 0xf];
-        var t = ((1 << ch) & this._regs[0x7]) === 0;
-        var n = ((8 << ch) & this._regs[0x7]) === 0;
-        var moff = getModOffset(ch);
-        var coff = moff + 3;
-        return [{ a: 0x40 + coff, d: t || n ? tl : 0x3f }];
+    PSGToOPL.prototype._updateNoiseFreq = function (np) {
+        var fnum = 1024 / (np + 1) - 1;
+        var blk = 7;
+        var res = [];
+        for (var ch = 3; ch < 6; ch++) {
+            res.push({
+                a: 0xb0 + ch,
+                d: 0x20 | ((blk & 7) << 2) | ((fnum >> 8) & 3),
+            });
+            res.push({ a: 0xa0 + ch, d: fnum & 0xff });
+        }
+        return res;
+    };
+    PSGToOPL.prototype._setupVoice = function () {
+        var res = [];
+        // TONE
+        for (var ch = 0; ch < 3; ch++) {
+            var moff = getModOffset(ch);
+            var coff = moff + 3;
+            res = res.concat([
+                { a: 0x20 + moff, d: 0x02 },
+                { a: 0x20 + coff, d: 0x01 },
+                { a: 0x40 + moff, d: 0x1b },
+                { a: 0x40 + coff, d: 0x3f },
+                { a: 0x60 + moff, d: 0xf0 },
+                { a: 0x60 + coff, d: 0xf0 },
+                { a: 0x80 + moff, d: 0x00 },
+                { a: 0x80 + coff, d: 0x00 },
+                { a: 0xc0 + ch, d: this._type === "ymf262" ? 0xfe : 0x0e },
+                { a: 0xe0 + ch, d: 0x00 },
+            ]);
+        }
+        // NOISE
+        for (var ch = 3; ch < 6; ch++) {
+            var moff = getModOffset(ch);
+            var coff = moff + 3;
+            res = res.concat([
+                { a: 0x20 + moff, d: 0x0f },
+                { a: 0x20 + coff, d: 0x0f },
+                { a: 0x40 + moff, d: 0x04 },
+                { a: 0x40 + coff, d: 0x3f },
+                { a: 0x60 + moff, d: 0xf0 },
+                { a: 0x60 + coff, d: 0xf0 },
+                { a: 0x80 + moff, d: 0x00 },
+                { a: 0x80 + coff, d: 0x00 },
+                { a: 0xc0 + ch, d: this._type === "ymf262" ? 0xfe : 0x0e },
+                { a: 0xe0 + ch, d: 0x00 },
+            ]);
+        }
+        return res;
     };
     PSGToOPL.prototype._updateTone = function (ch) {
+        var res = [];
+        if (!this._initialized) {
+            res = this._setupVoice();
+            this._initialized = true;
+        }
         var t = ((1 << ch) & this._regs[0x7]) === 0;
         var n = ((8 << ch) & this._regs[0x7]) === 0;
-        var moff = getModOffset(ch);
-        return [{ a: 0x40 + moff, d: t && n ? 0x10 : t ? 0x1b : 0x00 }];
+        var v = this._regs[0x08 + ch];
+        var vol = v & 0x10 ? 0 : v & 0xf;
+        var tl = [63, 62, 56, 52, 46, 42, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0][vol & 0xf];
+        var coff = getModOffset(ch) + 3;
+        if (t) {
+            res.push({ a: 0x40 + coff, d: tl });
+        }
+        else {
+            res.push({ a: 0x40 + coff, d: 0x3f });
+        }
+        var coff2 = getModOffset(ch + 3) + 3;
+        if (n) {
+            res.push({ a: 0x40 + coff2, d: tl });
+        }
+        else {
+            res.push({ a: 0x40 + coff2, d: 0x3f });
+        }
+        return res;
     };
     PSGToOPL.prototype._interpret = function (a, d) {
         this._regs[a & 0xff] = d & 0xff;
@@ -84,9 +148,11 @@ var PSGToOPL = /** @class */ (function () {
             return this._updateFreq(ch, freq);
         }
         if (0x08 <= a && a <= 0x0a) {
-            var ch = a - 8;
-            var vol = d & 0x10 ? 0 : d & 0xf;
-            return this._updateVol(ch, vol);
+            return this._updateTone(a - 0x08);
+        }
+        if (a === 0x06) {
+            var np = this._regs[0x06] & 0x1f;
+            return this._updateNoiseFreq(np);
         }
         if (a === 0x07) {
             return this._updateTone(0)
@@ -98,25 +164,6 @@ var PSGToOPL = /** @class */ (function () {
     PSGToOPL.prototype.interpret = function (a, d) {
         var _this = this;
         var res = [];
-        if (!this._initialized) {
-            for (var ch = 0; ch < 3; ch++) {
-                var moff = getModOffset(ch);
-                var coff = moff + 3;
-                res = res.concat([
-                    { a: 0x20 + moff, d: 0x02 },
-                    { a: 0x20 + coff, d: 0x01 },
-                    { a: 0x40 + moff, d: 0x1b },
-                    { a: 0x40 + coff, d: 0x00 },
-                    { a: 0x60 + moff, d: 0xf0 },
-                    { a: 0x60 + coff, d: 0xf0 },
-                    { a: 0x80 + moff, d: 0x00 },
-                    { a: 0x80 + coff, d: 0x00 },
-                    { a: 0xc0 + ch, d: this._type === "ymf262" ? 0xfe : 0x0e },
-                    { a: 0xe0 + ch, d: 0x00 },
-                ]);
-            }
-            this._initialized = true;
-        }
         res = res.concat(this._interpret(a, d));
         res = res.filter(function (_a) {
             var a = _a.a, d = _a.d;
