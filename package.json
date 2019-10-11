@@ -1,6 +1,6 @@
 {
   "name": "opll2opl",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "VGM converter from OPLL to OPLx",
   "bin": "dist/cmd.js",
   "main": "dist/index.js",

@@ -72,7 +72,7 @@ var Converter = /** @class */ (function () {
     Converter.prototype._initializeOPL3 = function () {
         if (this._opllTo === "ymf262") {
             if (!this._opl3initialized) {
-                this._output.writeByte(0x5e);
+                this._output.writeByte(0x5f);
                 this._output.writeByte(0x05);
                 this._output.writeByte(0x01);
                 this._opl3initialized = true;
