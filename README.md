@@ -1,3 +1,4 @@
+[![npm version](https://badge.fury.io/js/opll2opl.svg)](https://badge.fury.io/js/opll2opl)
 # opll2opl
 
 OPLL to OPLx data converter for VGM files.
