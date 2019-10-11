@@ -20,7 +20,7 @@ The following command converts PSG (AY-3-8910) track in `sample.vgm` to y8950, t
 Do not expect PSG conversion quality. Hardware envelope is not supported and noise generator is highly limited.
 
 ```
-$ opll2opl -p y8950 sample.vgm
+$ opll2opl -t none -p y8950 sample.vgm
 ```
 
 Convert both OPLL and PSG tracks in `sample.vgm` to YMF262 (OPL3), then write `sample.out.vgm`.
