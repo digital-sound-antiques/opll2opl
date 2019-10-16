@@ -43,7 +43,7 @@ function loadVgm(input: string): VGM {
   } catch (e) {
     vgm = buf;
   }
-  return VGM.parse(vgm!.buffer);
+  return VGM.parse(vgm!.buffer.slice(vgm.byteOffset));
 }
 
 function saveVgm(name: string, data: ArrayBuffer, zip: boolean) {
@@ -58,7 +58,7 @@ const input = argv._[0];
 const opllTo = argv.to.toLowerCase();
 const psgTo = argv["psg-to"].toLowerCase();
 
-if (opllTo === "none" && psgTo === "none") {
+if (opllTo === "thru" && psgTo === "thru") {
   console.error("Please specify at least one conversion type option.");
   process.exit(1);
 }
@@ -66,7 +66,7 @@ if (opllTo === "none" && psgTo === "none") {
 if (opllTo !== "none" && opllTo !== "ymf262") {
   if (psgTo === opllTo) {
     console.error(
-      "Can't use ${opllTo} for converting both OPLL and PSG simultaneously."
+      `Can't use ${opllTo} for converting both OPLL and PSG simultaneously.`
     );
     process.exit(1);
   }
