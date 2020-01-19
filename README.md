@@ -1,4 +1,7 @@
 [![npm version](https://badge.fury.io/js/opll2opl.svg)](https://badge.fury.io/js/opll2opl)
+
+This repository is no longer maintained. Try [vgm-conv](https://github.com/digital-sound-antiques/vgm-conv) instead.
+
 # opll2opl
 
 OPLL to OPLx data converter for VGM files.
